@@ -7,6 +7,7 @@ from pathlib import Path
 
 import yaml
 
+from recipelens.data.ingredients import load_synonyms
 from recipelens.store.repository import RecipeRepository
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -19,6 +20,7 @@ class IngredientFamilies:
     def __init__(self, repository: RecipeRepository, config_path: Path = FAMILIES_PATH) -> None:
         self.repository = repository
         self._cache: dict[str, tuple[str, ...]] = {}
+        self._synonyms = load_synonyms()
         document = yaml.safe_load(config_path.read_text(encoding="utf-8")) or {}
         self.rules = {
             name.casefold(): (
@@ -33,11 +35,16 @@ class IngredientFamilies:
         normalized = term.casefold().strip()
         if normalized in self._cache:
             return self._cache[normalized]
-        if normalized not in self.rules:
+        rule_key = (
+            normalized
+            if normalized in self.rules
+            else self._synonyms.get(normalized, normalized)
+        )
+        if rule_key not in self.rules:
             result = (normalized,)
             self._cache[normalized] = result
             return result
-        includes, excludes = self.rules[normalized]
+        includes, excludes = self.rules[rule_key]
         values = []
         for canonical, _count in self.repository.canonical_counts(limit=None):
             if any(pattern.search(canonical) for pattern in excludes):

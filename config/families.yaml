@@ -17,8 +17,13 @@ families:
     match_patterns:
       - "\\bonions?\\s*$"
     exclude_patterns:
+      - "\\bgreen onions?\\b"
+      - "\\b(?:scallions?|spring onions?)\\b"
       - "\\b(?:onion|granulated onion|dried onion) (?:powder|salt|flakes)\\b"
       - "\\b(?:dry|dried) onion soup mix\\b"
       - "\\bonion soup mix\\b"
-
-
+  green onion:
+    match_patterns:
+      - "\\b(?:green onions?|scallions?|spring onions?)\\s*$"
+    exclude_patterns:
+      - "\\b(?:green onion|scallion|spring onion) (?:powder|salt|flakes|dip)\\b"
