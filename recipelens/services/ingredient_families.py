@@ -30,6 +30,13 @@ class IngredientFamilies:
             for name, value in document.get("families", {}).items()
         }
 
+    def _is_explicit_product(self, term: str) -> bool:
+        """Check whether the term explicitly names an excluded product form of any family."""
+        for _, excludes in self.rules.values():
+            if any(p.search(term) for p in excludes):
+                return True
+        return False
+
     def variants(self, term: str) -> tuple[str, ...]:
         """Return matching canonical values, falling back to exact for unconfigured terms."""
         normalized = term.casefold().strip()
@@ -41,10 +48,17 @@ class IngredientFamilies:
             else self._synonyms.get(normalized, normalized)
         )
         if rule_key not in self.rules:
-            result = (normalized,)
-            self._cache[normalized] = result
-            return result
-        includes, excludes = self.rules[rule_key]
+            if self._is_explicit_product(normalized):
+                # Explicit product rule: user specifically named a product form (e.g. tomato sauce, garlic powder)
+                product_pattern = re.compile(rf"\b{re.escape(normalized)}s?\b", re.IGNORECASE)
+                includes = (product_pattern,)
+                excludes: tuple[re.Pattern[str], ...] = ()
+            else:
+                result = (normalized,)
+                self._cache[normalized] = result
+                return result
+        else:
+            includes, excludes = self.rules[rule_key]
         values = []
         for canonical, _count in self.repository.canonical_counts(limit=None):
             if any(pattern.search(canonical) for pattern in excludes):
