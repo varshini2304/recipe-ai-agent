@@ -1,0 +1,24 @@
+﻿# Owner-approved product boundaries, reviewed 2026-11-11.
+# Match the ingredient head (text before preparation comma), not arbitrary mentions in notes.
+families:
+  tomato:
+    match_patterns:
+      - "\\btomato(?:es)?\\s*$"
+    exclude_patterns:
+      - "\\btomatillos?\\b"
+      - "\\btomato(?:es)?\\s+(?:paste|sauce|juice|puree|purée|powder|ketchup|soup)\\b"
+  garlic:
+    match_patterns:
+      - "\\bgarlic(?:\\s+cloves?)?\\s*$"
+    exclude_patterns:
+      - "\\b(?:garlic|granulated garlic|dried garlic) (?:powder|salt|paste|sauce)\\b"
+      - "\\b(?:chili|chile|chilli)[ -]garlic sauce\\b"
+  onion:
+    match_patterns:
+      - "\\bonions?\\s*$"
+    exclude_patterns:
+      - "\\b(?:onion|granulated onion|dried onion) (?:powder|salt|flakes)\\b"
+      - "\\b(?:dry|dried) onion soup mix\\b"
+      - "\\bonion soup mix\\b"
+
+

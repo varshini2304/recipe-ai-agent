@@ -1,0 +1,66 @@
+# Owner-approved taxonomy, reviewed 2026-11-11 and checked against the top canonical ingredients in the real DB.
+groups:
+  dairy:
+    match_patterns:
+      - "\\b(?:butter|milk|cream|cheese|yogurt|yoghurt|buttermilk|ghee|whey|casein)\\b"
+    exclude_patterns:
+      - "\\bpeanut butter\\b"
+      - "\\b(?:almond|cashew|sunflower|soy|apple|coconut|cookie) butter\\b"
+      - "\\bbutter beans?\\b"
+      - "\\bcoconut milk\\b"
+      - "\\b(?:almond|soy|oat|rice) milk\\b"
+      - "\\bcocoa butter\\b"
+      - "\\bcoconut cream\\b"
+      - "\\bcream of tartar\\b"
+    uncertain_patterns:
+      - "\\bcream(?:ed)? coconut\\b"
+      - "\\bcream of (?:chicken|mushroom|celery|broccoli) soup\\b"
+  gluten:
+    match_patterns:
+      - "\\b(?:wheat|barley|rye|semolina|farina|couscous|bulgur|seitan)\\b"
+      - "\\b(?:all purpose|all-purpose|bread|cake|pastry|whole wheat) flour\\b"
+      - "\\bflour\\b"
+      - "\\b(?:breadcrumbs|bread crumbs)\\b"
+    exclude_patterns:
+      - "\\bgluten[- ]free\\b"
+      - "\\b(?:rice|almond|coconut|chickpea|corn|oat) flour\\b"
+    uncertain_patterns:
+      - "\\boats?\\b"
+      - "^flour$"
+      - "\\b(?:pasta|noodles)\\b"
+  peanuts:
+    match_patterns:
+      - "\\bpeanuts?\\b"
+      - "\\bpeanut butter\\b"
+      - "\\bpeanut oil\\b"
+    exclude_patterns: []
+    uncertain_patterns:
+      - "\\bgroundnut oil\\b"
+  nuts:
+    match_patterns:
+      - "\\b(?:almond|cashew|walnut|pecan|hazelnut|pistachio|macadamia|brazil) nuts?\\b"
+      - "\\b(?:almonds?|cashews?|walnuts?|pecans?|hazelnuts?|pistachios?|macadamias?)\\b"
+    exclude_patterns:
+      - "\\bpeanuts?\\b"
+      - "\\bpeanut butter\\b"
+    uncertain_patterns:
+      - "\\bcoconut\\b"
+  eggs:
+    match_patterns:
+      - "\\beggs?\\b"
+      - "\\begg whites?\\b"
+      - "\\begg yolks?\\b"
+    exclude_patterns:
+      - "\\beggplant\\b"
+    uncertain_patterns: []
+  shellfish:
+    match_patterns:
+      - "\\b(?:shrimp|prawn|crab|lobster|crayfish|crawfish|clam|oyster|mussel|scallop)\\b"
+    exclude_patterns: []
+    uncertain_patterns: []
+  meat:
+    match_patterns:
+      - "\\b(?:beef|pork|chicken|turkey|duck|lamb|veal|venison|bacon|ham|sausage)\\b"
+    exclude_patterns: []
+    uncertain_patterns:
+      - "\\b(?:chicken|beef|vegetable) (?:broth|stock)\\b"

@@ -1,0 +1,8 @@
+﻿boilerplate_patterns:
+  - "^(?:advertisement|advertisements|watch how to make this recipe)\\.?$"
+sentence_boundary_pattern: "(?<=[.!?])\\s+(?=[A-Z0-9])"
+low_confidence:
+  minimum_characters: 20
+  minimum_action_matches: 1
+  action_patterns:
+    - "\\b(?:add|arrange|bake|beat|blend|boil|bring|broil|brown|brush|chill|chop|combine|cook|cover|cut|divide|drain|fold|fry|grill|heat|knead|let|marinate|mash|melt|mix|place|pour|preheat|put|refrigerate|roast|saute|season|serve|simmer|slice|sprinkle|stir|taste|thicken|top|toss|transfer|trim|turn|warm|whisk)\\b"

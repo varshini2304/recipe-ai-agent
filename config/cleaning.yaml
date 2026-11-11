@@ -1,0 +1,22 @@
+# Source scrape artifacts removed only from cleaned text; *_raw columns are untouched.
+noise_patterns:
+  - "(?i)\\s*ADVERTISEMENT\\s*$"
+  - "(?i)^ADVERTISEMENT\\.?$"
+plural_singular:
+  tomatoes: tomato
+  potatoes: potato
+  leaves: leaf
+  loaves: loaf
+  berries: berry
+  cherries: cherry
+  halves: half
+  cloves: clove
+  limes: lime
+  lemons: lemon
+  onions: onion
+  eggs: egg
+  carrots: carrot
+  peppers: pepper
+  cheeses: cheese
+  scallions: scallion
+prep_pattern: "\\s*,\\s*(?=(?:(?:finely|coarsely|roughly)\\s+)?(?:chopped|diced|minced|peeled|sliced|grated|softened|melted|divided|optional|room temperature|to taste)\\b)"

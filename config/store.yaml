@@ -1,0 +1,12 @@
+vector_backend: numpy
+embedding_model: sentence-transformers/all-MiniLM-L6-v2
+embedding_batch_size: 64
+embedding_dtype: float32
+checkpoint_every_batches: 5
+index_dir: data/index
+rrf_k: 60
+search_limit: 20
+candidate_multiplier: 5
+candidate_floor: 100
+fts_title_weight: 2.0
+fts_ingredients_weight: 1.0
