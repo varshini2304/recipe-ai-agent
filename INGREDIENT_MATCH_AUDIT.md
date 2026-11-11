@@ -1,7 +1,13 @@
 # Ingredient match audit
 
 Canonical counts use `ingredient_lines`; raw regex counts search the JSON-decoded original `ingredients_raw` lines directly.
-Primary denominator: recipes with usable ingredients. Secondary denominator: all recipe rows.
+Primary denominator: recipes with usable ingredients (122,971). Secondary denominator: all recipe rows (125,164).
+
+### Naive Raw-Text Token Regexes
+The raw regex counts in the table below search the entire unparsed raw ingredient strings using naive word-boundary token regexes (which capture raw ingredients along with processed products like sauces and powders, as well as descriptive mentions):
+- **tomato**: `r"(?i)\btomato(?:es)?\b"`
+- **garlic**: `r"(?i)\bgarlic\b"`
+- **onion**: `r"(?i)\bonions?\b"`
 
 | Term | Exact canonical | Canonical token family | Raw-text regex (usable) | Gap: raw minus exact | Raw-text regex (all recipes) |
 |---|---:|---:|---:|---:|---:|
@@ -13,9 +19,20 @@ Primary denominator: recipes with usable ingredients. Secondary denominator: all
 
 Exact canonical AND: **1,731** recipes; raw regex AND among usable-ingredient recipes: **20,245**; gap: **+18,514**.
 Raw regex AND among all recipes: **20,245**. Usable denominator: **122,971**; all-recipes denominator: **125,164**.
+
 ## Reviewed family rules: canonical results vs raw-line regex
 
 Rules come from owner-approved `config/families.yaml`.
+Unlike the naive token regexes above, the raw-line regex in this comparison applies **product-excluding reviewed family regexes**:
+1. **Ingredient Head Match Pattern** (evaluated on the substring before the first comma):
+   - **tomato**: `r"(?i)\btomato(?:es)?\s*$"`
+   - **garlic**: `r"(?i)\bgarlic(?:\s+cloves?)?\s*$"`
+   - **onion**: `r"(?i)\bonions?\s*$"`
+2. **Product Exclusion Patterns** (evaluated across the full line to filter out processed products):
+   - **tomato exclusions**: `r"(?i)\btomatillos?\b"`, `r"(?i)\btomato(?:es)?\s+(?:paste|sauce|juice|puree|purée|powder|ketchup|soup)\b"`
+   - **garlic exclusions**: `r"(?i)\b(?:garlic|granulated garlic|dried garlic) (?:powder|salt|paste|sauce)\b"`, `r"(?i)\b(?:chili|chile|chilli)[ -]garlic sauce\b"`
+   - **onion exclusions**: `r"(?i)\bgreen onions?\b"`, `r"(?i)\b(?:scallions?|spring onions?)\b"`, `r"(?i)\b(?:onion|granulated onion|dried onion) (?:powder|salt|flakes)\b"`, `r"(?i)\b(?:dry|dried) onion soup mix\b"`, `r"(?i)\bonion soup mix\b"`
+
 | Term | Canonical family recipes | Raw-line regex recipes | Canonical minus raw |
 |---|---:|---:|---:|
 | tomato | 13,656 | 12,011 | +1,645 |
