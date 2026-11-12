@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Literal
 
 from recipelens.services.matcher import PantryItem
@@ -54,7 +54,9 @@ class QueryPlan:
     excluded_groups: tuple[str, ...] = ()
     max_steps: int | None = None
     pantry: tuple[PantryItem, ...] = ()
-    analytics_type: str | None = None  # count_with | common_ingredients | ingredient_count_stats | rank_by_steps
+    analytics_type: str | None = (
+        None  # count_with | common_ingredients | ingredient_count_stats | rank_by_steps
+    )
     recipe_ref: str | None = None  # e.g. "the second one", "2", or recipe ID like "fn:..."
     top_k: int = 10
     order: str = "asc"

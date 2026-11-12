@@ -2,15 +2,15 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
 from recipelens.orchestrator.schemas import QueryPlan
 from recipelens.orchestrator.state import SessionState
 from recipelens.services.analytics import AnalysisReport, AnalyticsService
-from recipelens.services.matcher import MatchReport, Matcher
+from recipelens.services.matcher import Matcher, MatchReport
 from recipelens.services.search import HybridSearch
-from recipelens.store.models import Filter, RecipeRecord
+from recipelens.store.models import Filter
 from recipelens.store.repository import RecipeRepository
 
 
@@ -88,9 +88,7 @@ class Router:
                     idx = int(ref) - 1
                     if 0 <= idx < len(state.last_result_ids):
                         target_id = state.last_result_ids[idx]
-                elif ref in state.last_result_ids:
-                    target_id = ref
-                elif ":" in ref:
+                elif ref in state.last_result_ids or ":" in ref:
                     target_id = ref
 
             if not target_id:

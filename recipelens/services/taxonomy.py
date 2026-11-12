@@ -50,6 +50,7 @@ class IngredientTaxonomy:
         self.repository = repository or RecipeRepository()
         document = yaml.safe_load(config_path.read_text(encoding="utf-8")) or {}
         self.groups: dict[str, dict[str, tuple[re.Pattern[str], ...]]] = {}
+        self._canonical_group_cache: dict[tuple[str, bool], tuple[str, ...]] = {}
         for group, definitions in document.get("groups", {}).items():
             self.groups[group] = {
                 key: tuple(
@@ -86,12 +87,18 @@ class IngredientTaxonomy:
         include_uncertain: bool = True,
     ) -> tuple[str, ...]:
         repository = repository or self.repository
+        cache_key = (group, include_uncertain)
+        if repository is self.repository and cache_key in self._canonical_group_cache:
+            return self._canonical_group_cache[cache_key]
         statuses = {"match", "uncertain"} if include_uncertain else {"match"}
-        return tuple(
+        result = tuple(
             canonical
             for canonical, _count in repository.canonical_counts(limit=None)
             if self.classify(canonical, group).status in statuses
         )
+        if repository is self.repository:
+            self._canonical_group_cache[cache_key] = result
+        return result
 
     def explain_exclusion(
         self,

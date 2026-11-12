@@ -1,0 +1,2 @@
+I have eggs, onions, tomatoes, rice, no peanuts, at most 6 steps
+exclude eggs too

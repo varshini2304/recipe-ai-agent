@@ -20,8 +20,7 @@ INTENT_CONFIG = ROOT / "config" / "intent.yaml"
 class IntentParser(Protocol):
     """Protocol for conversation intent parsing."""
 
-    def parse(self, message: str, state: SessionState) -> QueryPlan:
-        ...
+    def parse(self, message: str, state: SessionState) -> QueryPlan: ...
 
 
 class RuleBasedIntentParser:
@@ -147,7 +146,7 @@ class RuleBasedIntentParser:
 
         # 3. Recipe Detail reference: "the second one", "recipe 2", "show me the 3rd one", "view 1"
         # Or direct recipe ID like "fn:6Vi.RvXGd.fVPiUz10UWjlpt.bzgnXW"
-        direct_id_match = re.search(r"\b((?:ar|fn|ip):[A-Za-z0-9_./+-]+)\b", msg)
+        direct_id_match = re.search(r"\b((?:ar|fn|ip|epi):[^\s\],]+)", msg)
         if direct_id_match:
             return QueryPlan(
                 intent="recipe_detail",
@@ -269,9 +268,7 @@ class RuleBasedIntentParser:
         mode = "any" if re.search(r"\bOR\b", clause) else "all"
         # Split terms on AND, OR, comma
         raw_terms = re.split(r"\bAND\b|\bOR\b|\band\b|\bor\b|,", clause)
-        ingredients = tuple(
-            dict.fromkeys(t.strip().casefold() for t in raw_terms if t.strip())
-        )
+        ingredients = tuple(dict.fromkeys(t.strip().casefold() for t in raw_terms if t.strip()))
         return QueryPlan(
             intent="analytics",
             analytics_type="count_with",
@@ -282,7 +279,7 @@ class RuleBasedIntentParser:
 
     def _parse_analytics_rank_steps(self, msg: str) -> QueryPlan:
         """Parse 'show me tomato recipes with fewest steps'."""
-        order = "desc" if re.search(r"\b(?:most|highest|longest)\b", msg, re.I) else "asc"
+        order = "desc" if re.search(r"\b(?:most|highest|longest)\b", msg, re.IGNORECASE) else "asc"
         # Extract ingredient if present (e.g. "tomato recipes with fewest steps")
         m = re.search(
             r"\b([a-zA-Z]+)\s+recipes?\s+with\s+(?:fewest|least|most)\s+steps\b",

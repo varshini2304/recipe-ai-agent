@@ -1,0 +1,1 @@
+How many recipes have garlic AND onion?

@@ -68,7 +68,7 @@ class ChatSession:
         chips = self.state.constraint_chips()
         if not chips:
             return "state: [none]"
-        return f"state: [{ ' | '.join(chips) }]"
+        return f"state: [{' | '.join(chips)}]"
 
     def turn(self, message: str) -> str:
         """Execute a single conversational turn."""
@@ -93,6 +93,6 @@ class ChatSession:
         # Grounding check
         verification: GroundingVerification = self.verifier.verify(answer, result)
         if not verification.is_grounded:
-            answer += f"\n\n[Warning: Grounding check flagged ungrounded references: {', '.join(verification.ungrounded_ids)}]"
+            answer += f"\n\n[Warning: Grounding check failed: {verification.details}]"
 
         return answer

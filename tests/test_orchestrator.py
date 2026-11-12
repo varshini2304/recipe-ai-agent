@@ -10,14 +10,13 @@ import pytest
 from recipelens.orchestrator.chat import ChatSession
 from recipelens.orchestrator.composer import TemplateComposer
 from recipelens.orchestrator.intent import RuleBasedIntentParser
-from recipelens.orchestrator.router import Router, ToolResult
-from recipelens.orchestrator.schemas import QueryPlan
+from recipelens.orchestrator.router import ToolResult
 from recipelens.orchestrator.state import SessionState
 from recipelens.orchestrator.verifier import GroundingVerifier
 from recipelens.services.analytics import AnalyticsService
 from recipelens.services.matcher import Matcher, PantryItem
 from recipelens.services.taxonomy import IngredientTaxonomy
-from recipelens.store.models import Filter, RecipeRecord, SearchResult
+from recipelens.store.models import SearchResult
 from recipelens.store.repository import RecipeRepository
 from tests.matcher_fixture import build_fixture_db
 
@@ -154,6 +153,26 @@ def test_grounding_verifier_catches_fabricated_id() -> None:
     assert "ar:fabricated999" in check_fake.ungrounded_ids
 
 
+def test_grounding_verifier_catches_fabricated_number() -> None:
+    """Numeric claims must be present in grounded service output."""
+    verifier = GroundingVerifier()
+    res = SearchResult(
+        recipe_id="ar:valid123",
+        title="Real Recipe",
+        score=0.95,
+        score_breakdown={},
+        matched_terms=(),
+        ingredients_raw='["2 cups rice"]',
+        instructions_raw="Cook rice",
+    )
+    check = verifier.verify(
+        "Real Recipe [ID: ar:valid123] contains 73 grams protein",
+        ToolResult(kind="search", data=[res]),
+    )
+    assert check.is_grounded is False
+    assert check.ungrounded_numbers == ("73",)
+
+
 def test_orchestrator_with_fixture_db(tmp_path: Path) -> None:
     """Fast integration test using synthetic fixture database."""
     db_path = build_fixture_db(tmp_path / "test.sqlite3")
@@ -187,6 +206,7 @@ def test_orchestrator_with_fixture_db(tmp_path: Path) -> None:
     ans1 = session.turn("fried rice")
     assert "Egg Fried Rice" in ans1
     assert "syn:egg-fried-rice" in ans1
+    assert "Ingredient evidence" in ans1
     assert "fried rice" in session.state_summary()
 
     # 2. Detail turn
@@ -214,7 +234,7 @@ def test_real_db_multiturn_flow() -> None:
     assert "state: [query: penne pasta]" in session.state_summary()
 
     # 2. Add dairy constraint
-    ans2 = session.turn("I cannot have dairy")
+    session.turn("I cannot have dairy")
     assert "dairy" in session.state_summary()
     assert "exclude" in session.state_summary() or "no dairy" in session.state_summary()
 
@@ -228,5 +248,5 @@ def test_real_db_multiturn_flow() -> None:
     assert "matching your pantry" in ans4 or "recipe(s)" in ans4
 
     # 5. Follow-up refine
-    ans5 = session.turn("exclude eggs too")
+    session.turn("exclude eggs too")
     assert "eggs" in session.state_summary()

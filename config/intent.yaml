@@ -150,3 +150,6 @@ pantry_match_indicators:
   - "\\bwhat can i (?:make|cook) with\\b"
   - "\\bavailable ingredients:?\\b"
   - "\\brecipes? using\\b"
+
+# Maximum number of original ingredient lines shown as search evidence.
+search_evidence_limit: 4

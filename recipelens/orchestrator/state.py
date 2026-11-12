@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass, field, replace
+from dataclasses import dataclass, field, replace
 from typing import Any
 
 from recipelens.orchestrator.schemas import QueryPlan
@@ -139,9 +139,7 @@ class SessionState:
                 idx = int(ref) - 1
                 if 0 <= idx < len(self.last_result_ids):
                     new_focused = self.last_result_ids[idx]
-            elif ref in self.last_result_ids:
-                new_focused = ref
-            elif ":" in ref:  # direct ID
+            elif ref in self.last_result_ids or ":" in ref:
                 new_focused = ref
 
         return replace(
@@ -175,7 +173,9 @@ class SessionState:
             chips.append(f"max {self.max_steps} steps")
         if self.pantry:
             p_names = [p.name for p in self.pantry]
-            chips.append(f"pantry ({len(p_names)}): {', '.join(p_names[:4])}{'...' if len(p_names) > 4 else ''}")
+            chips.append(
+                f"pantry ({len(p_names)}): {', '.join(p_names[:4])}{'...' if len(p_names) > 4 else ''}"
+            )
         return chips
 
     def to_dict(self) -> dict[str, Any]:
@@ -187,10 +187,7 @@ class SessionState:
             "excluded_groups": list(self.excluded_groups),
             "max_steps": self.max_steps,
             "step_metric": self.step_metric,
-            "pantry": [
-                {"name": p.name, "qty": p.qty, "unit": p.unit}
-                for p in self.pantry
-            ],
+            "pantry": [{"name": p.name, "qty": p.qty, "unit": p.unit} for p in self.pantry],
             "matcher_constraints": {
                 "exclude_ingredients": list(self.matcher_constraints.exclude_ingredients),
                 "excluded_groups": list(self.matcher_constraints.excluded_groups),

@@ -3,17 +3,25 @@
 from __future__ import annotations
 
 import json
-from typing import Any
+from pathlib import Path
+
+import yaml
 
 from recipelens.orchestrator.router import ToolResult
 from recipelens.orchestrator.state import SessionState
 from recipelens.services.analytics import AnalysisReport
-from recipelens.services.matcher import MatchReport, RecipeMatch
+from recipelens.services.matcher import MatchReport
 from recipelens.store.models import RecipeRecord, SearchResult
 
 
 class TemplateComposer:
     """Renders structured ToolResults into user-facing conversational responses."""
+
+    def __init__(self, config_path: Path | None = None) -> None:
+        root = Path(__file__).resolve().parents[2]
+        path = config_path or root / "config" / "intent.yaml"
+        config = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+        self.search_evidence_limit = int(config.get("search_evidence_limit", 4))
 
     def compose(self, result: ToolResult, state: SessionState) -> str:
         """Compose a user-facing response from ToolResult and current SessionState."""
@@ -21,7 +29,10 @@ class TemplateComposer:
             return "Session state has been reset. All previous searches, pantry items, and constraints have been cleared."
 
         if result.kind == "unsupported":
-            reason = result.unsupported_reason or "The requested operation is not supported by the dataset."
+            reason = (
+                result.unsupported_reason
+                or "The requested operation is not supported by the dataset."
+            )
             return f"Unsupported request: {reason}"
 
         if result.kind == "clarification":
@@ -51,7 +62,9 @@ class TemplateComposer:
             return self._compose_analytics(result.report, state)
 
         if result.kind == "error":
-            warnings = " ".join(result.warnings) if result.warnings else "An unknown error occurred."
+            warnings = (
+                " ".join(result.warnings) if result.warnings else "An unknown error occurred."
+            )
             return f"Error: {warnings}"
 
         return "Response generated successfully."
@@ -60,7 +73,7 @@ class TemplateComposer:
         if not results:
             constraints_desc = ", ".join(state.constraint_chips())
             return (
-                f"No recipes found matching \"{state.query_text}\""
+                f'No recipes found matching "{state.query_text}"'
                 + (f" with active constraints ({constraints_desc})" if constraints_desc else "")
                 + ". Try relaxing a filter or searching for a broader term."
             )
@@ -68,18 +81,29 @@ class TemplateComposer:
         lines: list[str] = []
         active_chips = state.constraint_chips()
         chip_str = f" [Filters: {', '.join(active_chips)}]" if active_chips else ""
-        lines.append(f"Found {len(results)} recipes for \"{state.query_text}\"{chip_str}:\n")
+        lines.append(f'Found {len(results)} recipes for "{state.query_text}"{chip_str}:\n')
 
         for idx, r in enumerate(results, 1):
             lines.append(f"{idx}. **{r.title}** [ID: {r.recipe_id}]")
             if r.matched_terms:
                 lines.append(f"   Matched terms: {', '.join(r.matched_terms)}")
+            if r.ingredients_raw:
+                try:
+                    ingredients = json.loads(r.ingredients_raw)
+                except (json.JSONDecodeError, TypeError):
+                    ingredients = []
+                if isinstance(ingredients, list) and ingredients and self.search_evidence_limit > 0:
+                    lines.append("   Ingredient evidence:")
+                    for ingredient in ingredients[: self.search_evidence_limit]:
+                        lines.append(f"   - {ingredient}")
 
         if state.excluded_groups:
             lines.append(
                 f"\n*Note: All results strictly exclude taxonomy groups: {', '.join(state.excluded_groups)}.*"
             )
-        lines.append("\nYou can view instructions for any recipe (e.g. 'tell me about the 1st one') or refine constraints (e.g. 'exclude eggs too').")
+        lines.append(
+            "\nYou can view instructions for any listed recipe or refine constraints (e.g. 'exclude eggs too')."
+        )
         return "\n".join(lines)
 
     def _compose_match(self, report: MatchReport | None, state: SessionState) -> str:
@@ -93,24 +117,36 @@ class TemplateComposer:
             for m in report.results:
                 matched_names = [item.pantry_name for item in m.matched]
                 lines.append(f"{m.rank}. **{m.title}** [ID: {m.recipe_id}] (Score: {m.score:.2f})")
-                lines.append(f"   • Matched pantry: {', '.join(matched_names) if matched_names else 'none'}")
-                lines.append(f"   • Missing to buy: {', '.join(m.missing) if m.missing else 'None (complete pantry match!)'}")
+                lines.append(
+                    f"   • Matched pantry: {', '.join(matched_names) if matched_names else 'none'}"
+                )
+                lines.append(
+                    f"   • Missing to buy: {', '.join(m.missing) if m.missing else 'None (complete pantry match!)'}"
+                )
                 if m.assumed_staples:
                     lines.append(f"   • Assumed staples: {', '.join(m.assumed_staples)}")
                 lines.append(f"   • Steps: {m.step_count} ({m.step_metric})")
                 lines.append(f"   • Why: {m.why}")
                 lines.append("")
         else:
-            lines.append("No recipe satisfies every hard constraint. Your constraints were NOT relaxed silently.\n")
+            lines.append(
+                "No recipe satisfies every hard constraint. Your constraints were NOT relaxed silently.\n"
+            )
             if report.violating_alternatives:
-                lines.append("The closest violating alternatives (breaking at least one constraint) are:\n")
+                lines.append(
+                    "The closest violating alternatives (breaking at least one constraint) are:\n"
+                )
                 for m in report.violating_alternatives:
                     violation_descs = [f"{v.kind}: {v.detail}" for v in m.violations]
                     matched_names = [item.pantry_name for item in m.matched]
                     lines.append(f"{m.rank}. **[VIOLATING] {m.title}** [ID: {m.recipe_id}]")
                     lines.append(f"   • Violations: {'; '.join(violation_descs)}")
-                    lines.append(f"   • Matched pantry: {', '.join(matched_names) if matched_names else 'none'}")
-                    lines.append(f"   • Missing to buy: {', '.join(m.missing) if m.missing else 'none'}")
+                    lines.append(
+                        f"   • Matched pantry: {', '.join(matched_names) if matched_names else 'none'}"
+                    )
+                    lines.append(
+                        f"   • Missing to buy: {', '.join(m.missing) if m.missing else 'none'}"
+                    )
                     lines.append(f"   • Steps: {m.step_count}")
                     lines.append("")
 
@@ -132,7 +168,10 @@ class TemplateComposer:
         if report.secondary_denominator_label:
             lines.append(f"• **Secondary denominator:** {report.secondary_denominator_label}")
         lines.append(f"• **Formula:** `{report.formula}`")
-        lines.append(f"• **Normalization notes:** {report.normalization_notes}\n")
+        norm_notes = report.normalization_notes
+        if len(norm_notes) > 250:
+            norm_notes = norm_notes[:250] + "... [canonical list truncated for display]"
+        lines.append(f"• **Normalization notes:** {norm_notes}\n")
 
         # Format rows based on structure
         if not report.rows:
@@ -152,16 +191,26 @@ class TemplateComposer:
             # common_ingredients
             lines.append("**Top ingredients:**\n")
             for idx, r in enumerate(report.rows, 1):
-                lines.append(f"{idx}. `{r['canonical']}`: {r['count']:,} recipes ({r['percentage']:.2f}%)")
+                lines.append(
+                    f"{idx}. `{r['canonical']}`: {r['count']:,} recipes ({r['percentage']:.2f}%)"
+                )
         elif "mean" in first_row and "median" in first_row:
             # ingredient_count_stats
             m_val = first_row["mean"]
             med_val = first_row["median"]
             min_val = first_row["min"]
             max_val = first_row["max"]
-            lines.append(f"• **Mean ingredient count:** {m_val:.2f}" if m_val is not None else "• Mean: N/A")
-            lines.append(f"• **Median ingredient count:** {med_val:.1f}" if med_val is not None else "• Median: N/A")
-            lines.append(f"• **Range:** {min_val} to {max_val}" if min_val is not None else "• Range: N/A")
+            lines.append(
+                f"• **Mean ingredient count:** {m_val:.2f}" if m_val is not None else "• Mean: N/A"
+            )
+            lines.append(
+                f"• **Median ingredient count:** {med_val:.1f}"
+                if med_val is not None
+                else "• Median: N/A"
+            )
+            lines.append(
+                f"• **Range:** {min_val} to {max_val}" if min_val is not None else "• Range: N/A"
+            )
         elif "step_count" in first_row or "metric_value" in first_row:
             # rank_by_steps
             lines.append(f"**Ranked recipes by {report.metric}:**\n")
@@ -170,7 +219,9 @@ class TemplateComposer:
                     f"{idx}. **{r['title']}** [ID: {r['recipe_id']}] — {report.metric}: {r['metric_value']}, ingredients: {r['ingredient_count']}"
                 )
             if report.cutoff_tie_count and report.cutoff_tie_count > 1:
-                lines.append(f"\n*(Cutoff ties: {report.cutoff_tie_count} recipes tied at step count)*")
+                lines.append(
+                    f"\n*(Cutoff ties: {report.cutoff_tie_count} recipes tied at step count)*"
+                )
 
         return "\n".join(lines)
 
@@ -181,7 +232,9 @@ class TemplateComposer:
         lines: list[str] = []
         lines.append(f"## {recipe.title}")
         lines.append(f"**Recipe ID:** `{recipe.recipe_id}` (Source: {recipe.source})\n")
-        lines.append(f"• **Step count:** {recipe.step_count} (sentence count: {recipe.sentence_count})")
+        lines.append(
+            f"• **Step count:** {recipe.step_count} (sentence count: {recipe.sentence_count})"
+        )
         lines.append(f"• **Ingredient count:** {recipe.ingredient_count}\n")
 
         lines.append("### Ingredients:")
