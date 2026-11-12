@@ -43,3 +43,17 @@ families:
     match_patterns:
       - "\\b(?:onion|granulated onion|dried onion)\\s+powder\\b"
     exclude_patterns: []
+  egg:
+    # Head-anchored: matches "egg", "large egg", "hard-boiled egg"; not egg white/yolk/noodles/eggplant.
+    match_patterns:
+      - "\\beggs?\\s*$"
+    exclude_patterns:
+      - "\\beggplants?\\b"
+      - "\\begg (?:substitute|replacer|beaters)\\b"
+  rice:
+    # Matches "rice", "cooked rice", "long-grain white rice"; not rice flour/vinegar/wine/paper/noodles.
+    match_patterns:
+      - "\\brice\\s*$"
+    exclude_patterns:
+      - "\\brice (?:flour|vinegar|wine|paper|noodles?|milk|cereal|krispies|syrup|bran)\\b"
+      - "\\b(?:puffed|crispy|crisped) rice\\b"

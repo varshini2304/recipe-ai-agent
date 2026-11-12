@@ -1,0 +1,39 @@
+# Matcher scoring (Task 2). Every number the ranking depends on lives here, not in code.
+# score = w_coverage * coverage + w_completeness * completeness + w_steps * step_bonus
+#   coverage     = pantry credit / pantry size           (how many of the user's items the recipe uses)
+#   completeness = 1 - missing / required ingredients    (how little extra shopping the recipe needs)
+#   step_bonus   = 1 - steps / step_cap, floored at 0    (fewer instruction steps is better)
+weights:
+  coverage: 0.5
+  completeness: 0.3
+  steps: 0.2
+
+# A stated preference multiplies one weight; weights are re-normalised to sum to 1 afterwards.
+preference_multipliers:
+  prefer_fewer_missing:
+    completeness: 2.5
+  prefer_fewer_steps:
+    steps: 3.0
+
+step_cap: 12
+
+# A pantry item that matches by name but whose stated quantity is clearly too small
+# earns this fraction of a full coverage credit (it is also flagged in the output).
+insufficient_quantity_credit: 0.5
+
+min_matched_pantry_items: 1
+default_top_k: 5
+
+# Candidate recipes are pre-ordered in SQL (most pantry items matched, then fewest ingredients)
+# and capped; the report says when the cap truncated the candidate set.
+candidate_cap: 5000
+
+alternatives:
+  max_results: 5
+  candidate_cap: 1500
+
+# Ingredient lines matching these are not counted as "missing" (reported separately).
+optional_patterns:
+  - "\\boptional\\b"
+  - "\\bfor (?:garnish|serving|decoration)\\b"
+  - "\\bgarnish\\b"

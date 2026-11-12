@@ -1,0 +1,19 @@
+# Unit conversion for pantry-vs-recipe quantity checks (Task 2).
+# Quantities are compared ONLY when both sides share a family (or are the same count unit,
+# or are both unit-less counts). Everything else is reported as "not verified".
+# Amounts are compared as written in the recipe; servings are not scaled.
+families:
+  volume:            # factors to millilitres
+    teaspoon: 4.92892
+    tablespoon: 14.7868
+    cup: 236.588
+    milliliter: 1.0
+    liter: 1000.0
+  mass:              # factors to grams
+    gram: 1.0
+    kilogram: 1000.0
+    ounce: 28.3495
+    pound: 453.592
+# Same-unit-only comparisons (a can is not convertible to a cup).
+count_units: [clove, can, package, bunch, pinch]
+tolerance: 0.0001

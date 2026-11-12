@@ -19,6 +19,7 @@ class RecipeRepository:
 
     def __init__(self, db_path: Path = DEFAULT_DB) -> None:
         self.db_path = db_path.resolve()
+        self._canonical_cache: list[tuple[str, int]] | None = None
 
     def _connect(self) -> sqlite3.Connection:
         uri = self.db_path.as_uri() + "?mode=ro"
@@ -222,6 +223,8 @@ class RecipeRepository:
         return {recipe_id: tuple(lines) for recipe_id, lines in result.items()}
 
     def canonical_counts(self, limit: int | None = 100) -> list[tuple[str, int]]:
+        if limit is None and self._canonical_cache is not None:
+            return self._canonical_cache
         limit_sql = "" if limit is None else " LIMIT ?"
         parameters: tuple[object, ...] = () if limit is None else (limit,)
         with self._connect() as connection:
@@ -230,7 +233,57 @@ class RecipeRepository:
                 f"GROUP BY canonical ORDER BY n DESC, canonical{limit_sql}",
                 parameters,
             ).fetchall()
-        return [(row["canonical"], row["n"]) for row in rows]
+        result = [(row["canonical"], row["n"]) for row in rows]
+        if limit is None:
+            self._canonical_cache = result
+        return result
+
+    def top_overlap_ids(
+        self,
+        include_variants: tuple[tuple[str, ...], ...],
+        recipe_filter: Filter = DEFAULT_FILTER,
+        *,
+        excluded_canonical: tuple[str, ...] = (),
+        require_instructions: bool = False,
+        min_overlap: int = 1,
+        limit: int = 5000,
+    ) -> tuple[list[tuple[str, int]], int]:
+        """Rank search-eligible recipes by how many ingredient groups they contain.
+
+        Each element of ``include_variants`` is one wanted ingredient (a tuple of acceptable
+        canonical values). Returns ``([(recipe_id, overlap), ...], total_candidates)`` ordered by
+        overlap desc, then fewer total ingredients, then recipe_id; the list is capped at
+        ``limit`` while ``total_candidates`` counts every recipe that met ``min_overlap``.
+        Hard constraints in ``recipe_filter`` / ``excluded_canonical`` apply before ranking.
+        """
+        groups = [list(dict.fromkeys(group)) for group in include_variants if group]
+        if not groups:
+            return [], 0
+        where, where_params = self._where(
+            recipe_filter, excluded_canonical, search_eligible=True
+        )
+        if require_instructions:
+            where += " AND r.has_instructions=1"
+        packed = json.dumps(groups)
+        body = (
+            "FROM recipes r JOIN ingredient_lines il ON il.recipe_id = r.recipe_id "
+            "JOIN (SELECT CAST(g.key AS INTEGER) AS group_id, v.value AS canonical "
+            "FROM json_each(?) AS g, json_each(g.value) AS v) wanted "
+            "ON wanted.canonical = il.canonical "
+            f"WHERE {where} GROUP BY r.recipe_id "
+            "HAVING COUNT(DISTINCT wanted.group_id) >= ?"
+        )
+        with self._connect() as connection:
+            total = connection.execute(
+                f"SELECT COUNT(*) FROM (SELECT r.recipe_id {body})",
+                [packed, *where_params, min_overlap],
+            ).fetchone()[0]
+            rows = connection.execute(
+                "SELECT r.recipe_id, COUNT(DISTINCT wanted.group_id) AS overlap "
+                f"{body} ORDER BY overlap DESC, r.ingredient_count ASC, r.recipe_id ASC LIMIT ?",
+                [packed, *where_params, min_overlap, limit],
+            ).fetchall()
+        return [(row["recipe_id"], int(row["overlap"])) for row in rows], int(total)
 
     def ingredient_line_records_for(self, recipe_id: str) -> tuple[tuple[str, str], ...]:
         """Return original source line and canonical value for a recipe, in source order."""

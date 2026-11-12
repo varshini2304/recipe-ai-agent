@@ -1,0 +1,13 @@
+# Pantry staples: recipe lines matching these canonical patterns are assumed to be on hand
+# when Preferences.assume_staples is true. They are ALWAYS reported in the output
+# (assumed_staples), never silently dropped. Patterns run on the canonical ingredient name.
+assume_staples_default: true
+patterns:
+  - "^(?:(?:kosher|sea|table|coarse|fine|iodized)\\s+)?salt(?:\\s*,?\\s*to taste)?$"
+  - "^(?:(?:freshly\\s+)?(?:ground\\s+)?(?:black|white)\\s+)?pepper(?:\\s*,?\\s*to taste)?$"
+  - "^(?:freshly ground )?black pepper(?:\\s*,?\\s*to taste)?$"
+  - "^salt and (?:freshly ground )?(?:black )?pepper(?:\\s*,?\\s*to taste)?$"
+  - "^(?:(?:cold|warm|hot|boiling|ice|ice cold|lukewarm|tap)\\s+)?water$"
+  - "^(?:(?:vegetable|canola|olive|extra[- ]virgin olive|cooking|neutral|light olive)\\s+)?oil$"
+  - "^(?:extra[- ]virgin )?olive oil$"
+  - "^(?:vegetable|canola|cooking) oil$"
