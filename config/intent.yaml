@@ -1,0 +1,152 @@
+# Rule-based intent parser configuration for RecipeLens (Phase 4A)
+
+taxonomy_synonyms:
+  dairy:
+    - dairy
+    - milk
+    - butter
+    - cheese
+    - cream
+    - yogurt
+    - yoghurt
+    - lactose
+    - buttermilk
+    - ghee
+    - casein
+    - whey
+  gluten:
+    - gluten
+    - wheat
+    - flour
+    - bread
+    - barley
+    - rye
+    - semolina
+  peanuts:
+    - peanut
+    - peanuts
+    - groundnut
+    - groundnuts
+  nuts:
+    - nut
+    - nuts
+    - tree nuts
+    - almond
+    - walnut
+    - pecan
+    - hazelnut
+    - cashew
+    - pistachio
+    - macadamia
+    - brazil nut
+  eggs:
+    - egg
+    - eggs
+  shellfish:
+    - shellfish
+    - shrimp
+    - prawn
+    - prawns
+    - crab
+    - lobster
+    - clam
+    - clams
+    - oyster
+    - oysters
+    - mussel
+    - mussels
+    - scallop
+    - scallops
+  meat:
+    - meat
+    - beef
+    - pork
+    - chicken
+    - turkey
+    - lamb
+    - bacon
+    - ham
+    - sausage
+    - poultry
+    - veal
+    - venison
+
+number_words:
+  first: 1
+  "1st": 1
+  one: 1
+  second: 2
+  "2nd": 2
+  two: 2
+  third: 3
+  "3rd": 3
+  three: 3
+  fourth: 4
+  "4th": 4
+  four: 4
+  fifth: 5
+  "5th": 5
+  five: 5
+  sixth: 6
+  "6th": 6
+  six: 6
+  seventh: 7
+  "7th": 7
+  seven: 7
+  eighth: 8
+  "8th": 8
+  eight: 8
+  ninth: 9
+  "9th": 9
+  nine: 9
+  tenth: 10
+  "10th": 10
+  ten: 10
+
+unsupported_topics:
+  patterns:
+    - "\\bcalor(?:ie|ies)\\b"
+    - "\\bnutritio(?:n|nal)\\b"
+    - "\\bproteins?\\b"
+    - "\\bcarbs?\\b"
+    - "\\bcarbohydrates?\\b"
+    - "\\bfats?\\b"
+    - "\\bsodium\\b"
+    - "\\bcholesterol\\b"
+    - "\\bcook(?:ing)? time\\b"
+    - "\\bprep(?:aration)? time\\b"
+    - "\\bhow long (?:does it take|to cook|to make)\\b"
+    - "\\bminutes to (?:cook|bake|make)\\b"
+  reason: "The Recipe Box dataset does not contain nutritional information (calories, macronutrients) or cooking/prep times."
+
+reset_patterns:
+  - "^\\s*(?:reset|start over|clear(?: state)?|new search|start fresh)\\s*$"
+
+chitchat_patterns:
+  - "^\\s*(?:hi|hello|hey|howdy|greetings|help|who are you|what can you do)\\b"
+
+analytics_intent_patterns:
+  count_with:
+    - "\\bhow many recipes (?:have|contain|use|include|with)\\b"
+    - "\\bwhat percentage of recipes (?:have|contain|use|include|with)\\b"
+    - "\\bcount of recipes\\b"
+    - "\\bhow many (?:of them|contain|have)\\b"
+  common_ingredients:
+    - "\\b(?:most common|top|most popular|common) ingredients\\b"
+    - "\\bwhat ingredients are most common\\b"
+  ingredient_count_stats:
+    - "\\baverage (?:number of )?ingredients\\b"
+    - "\\b(?:mean|median) (?:ingredient count|number of ingredients)\\b"
+    - "\\bingredient count stats\\b"
+  rank_by_steps:
+    - "\\b(?:fewest|least|lowest|shortest) steps\\b"
+    - "\\b(?:most|highest|longest) steps\\b"
+    - "\\brank by steps\\b"
+
+pantry_match_indicators:
+  - "\\bi have\\b"
+  - "\\bin my pantry\\b"
+  - "\\bpantry:?\\b"
+  - "\\bwhat can i (?:make|cook) with\\b"
+  - "\\bavailable ingredients:?\\b"
+  - "\\brecipes? using\\b"
