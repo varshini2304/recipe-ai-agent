@@ -86,6 +86,8 @@ class ChatSession:
             result_ids = [m.recipe_id for m in result.report.results]
             titles = {m.recipe_id: m.title for m in result.report.results}
             merged_state = merged_state.with_results(result_ids, titles)
+        elif result.kind == "substitution" and result.report:
+            merged_state = merged_state.with_focused_recipe(result.report.report.target_recipe_id)
 
         self.state = merged_state
         answer: str = self.composer.compose(result, self.state)

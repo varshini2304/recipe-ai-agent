@@ -9,6 +9,7 @@ from typing import Any
 from recipelens.orchestrator.router import ToolResult
 from recipelens.services.analytics import AnalysisReport
 from recipelens.services.matcher import MatchReport
+from recipelens.services.substitution import SubstitutionPlan
 from recipelens.store.models import RecipeRecord, SearchResult
 
 EXPLICIT_ID_PATTERN = re.compile(r"\[ID:\s*([^\]]+)\]")
@@ -54,6 +55,14 @@ class GroundingVerifier:
                 allowed.add(m.recipe_id)
             for m in result.report.violating_alternatives:
                 allowed.add(m.recipe_id)
+
+        if isinstance(result.report, SubstitutionPlan):
+            report = result.report.report
+            allowed.add(report.target_recipe_id)
+            allowed.update(report.peer_recipe_ids)
+            for candidate in (*report.candidates, *report.conflicting_signals):
+                allowed.update(candidate.with_recipe_ids)
+                allowed.update(candidate.support_recipe_ids)
 
         if isinstance(result.report, AnalysisReport):
             for r in result.report.rows:
@@ -109,6 +118,15 @@ class GroundingVerifier:
         for value in NUMBER_PATTERN.findall(repr(result)):
             allowed.add(value)
             allowed.add(value.replace(",", ""))
+            try:
+                number = float(value.replace(",", "").rstrip("%"))
+            except ValueError:
+                continue
+            for digits in (1, 2, 3):
+                formatted = f"{number:.{digits}f}"
+                allowed.add(formatted)
+                if value.endswith("%"):
+                    allowed.add(formatted + "%")
 
         # List positions are derived from the returned candidate order and count.
         result_count = len(result.data) if isinstance(result.data, list) else 0

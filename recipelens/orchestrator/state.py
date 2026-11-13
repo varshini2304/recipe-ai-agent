@@ -132,7 +132,7 @@ class SessionState:
 
         # Focused recipe
         new_focused = self.focused_recipe_id
-        if plan.intent == "recipe_detail" and plan.recipe_ref:
+        if plan.intent in {"recipe_detail", "substitute"} and plan.recipe_ref:
             ref = plan.recipe_ref.strip()
             # If reference is an integer rank (1-indexed)
             if ref.isdigit():

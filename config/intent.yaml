@@ -143,6 +143,10 @@ analytics_intent_patterns:
     - "\\b(?:most|highest|longest) steps\\b"
     - "\\brank by steps\\b"
 
+substitution_patterns:
+  replace_without: "^\\s*(?:replace|substitute)\\s+(?P<remove>.+?)\\s+without\\s+(?P<restriction>.+?)\\s+in\\s+(?P<recipe>.+?)\\s*[?.!]*\\s*$"
+  remove_from: "^\\s*remove\\s+(?P<remove>.+?)\\s+from\\s+(?P<recipe>.+?)\\s*[?.!]*\\s*$"
+
 pantry_match_indicators:
   - "\\bi have\\b"
   - "\\bin my pantry\\b"

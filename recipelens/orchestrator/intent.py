@@ -51,6 +51,17 @@ class RuleBasedIntentParser:
             atype: tuple(re.compile(p, re.IGNORECASE) for p in plist)
             for atype, plist in raw.get("analytics_intent_patterns", {}).items()
         }
+        self.substitution_patterns = {
+            name: re.compile(pattern, re.IGNORECASE)
+            for name, pattern in raw.get("substitution_patterns", {}).items()
+        }
+        substitution_config = (
+            yaml.safe_load((ROOT / "config" / "substitution.yaml").read_text(encoding="utf-8"))
+            or {}
+        )
+        self.remove_group_aliases: dict[str, str] = substitution_config.get(
+            "remove_group_aliases", {}
+        )
 
     def _resolve_taxonomy_group(self, term: str) -> str | None:
         """Check if term matches a known taxonomy group synonym."""
@@ -143,6 +154,48 @@ class RuleBasedIntentParser:
                     unsupported_reason=self.unsupported_reason,
                     raw_message=msg,
                 )
+
+        # Substitution requests must be recognized before a recipe ID/detail reference.
+        for pattern_name in ("replace_without", "remove_from"):
+            pattern = self.substitution_patterns.get(pattern_name)
+            match = pattern.search(msg) if pattern else None
+            if not match:
+                continue
+            remove_term = match.group("remove").strip(" \t.,!?'").casefold()
+            remove_group = self.remove_group_aliases.get(remove_term)
+            if remove_group is None and remove_term in self.taxonomy_synonyms:
+                remove_group = remove_term
+            excluded_groups: tuple[str, ...] = ()
+            if pattern_name == "replace_without":
+                restriction = match.group("restriction").strip(" \t.,!?'")
+                group = self._resolve_taxonomy_group(restriction)
+                if group:
+                    excluded_groups = (group,)
+                else:
+                    return QueryPlan(
+                        intent="substitute",
+                        remove_term=remove_term,
+                        remove_group=remove_group,
+                        clarification_question=(
+                            f"I could not resolve {restriction!r} to a configured restriction group."
+                        ),
+                        raw_message=msg,
+                    )
+            recipe_ref = match.group("recipe").strip(" \t.,!?'")
+            recipe_ref = re.sub(r"^(?:the\s+)?recipe\s+", "", recipe_ref, flags=re.IGNORECASE)
+            ordinal = re.fullmatch(r"(?:the\s+)?(\w+)(?:\s+one)?", recipe_ref, re.IGNORECASE)
+            if ordinal:
+                number = self._extract_number(ordinal.group(1))
+                if number is not None:
+                    recipe_ref = str(number)
+            return QueryPlan(
+                intent="substitute",
+                remove_term=remove_term,
+                remove_group=remove_group,
+                excluded_groups=excluded_groups,
+                recipe_ref=recipe_ref,
+                raw_message=msg,
+            )
 
         # 3. Recipe Detail reference: "the second one", "recipe 2", "show me the 3rd one", "view 1"
         # Or direct recipe ID like "fn:6Vi.RvXGd.fVPiUz10UWjlpt.bzgnXW"

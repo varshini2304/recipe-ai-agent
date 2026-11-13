@@ -1,0 +1,56 @@
+# Peer mining and evidence grades for Task 3.
+peer_pool_size: 120
+peer_query_ingredient_limit: 8
+peer_title_minimum_tokens: 2
+peer_direct_minimum_count: 3
+candidate_limit: 5
+evidence_id_limit: 8
+minimum_peer_support: 3
+minimum_candidate_support: 2
+laplace_alpha: 1.0
+max_lift_for_score: 5.0
+score_weights:
+  frequency_difference: 0.75
+  lift: 0.25
+
+# Common cooking basics add little information to a same-dish query.
+peer_query_exclude_patterns:
+  - "^(?:salt|pepper|water|oil|olive oil|vegetable oil|black pepper)$"
+
+# Ingredient aliases which designate an allergen group to remove.
+remove_group_aliases:
+  egg: eggs
+  eggs: eggs
+
+# Product-aware matching for common ingredient removals. All patterns are auditable here.
+remove_ingredient_patterns:
+  cream:
+    match_patterns:
+      - "\\b(?:(?:heavy|whipping|sour|light|double|clotted)\\s+){0,2}cream\\b"
+    exclude_patterns:
+      - "\\b(?:coconut cream|cream of tartar|cream of (?:chicken|mushroom|celery|broccoli) soup)\\b"
+      - "\\bcream cheese\\b"
+  egg:
+    match_patterns:
+      - "\\beggs?\\b"
+    exclude_patterns:
+      - "\\beggplants?\\b"
+
+evidence_grades:
+  strong:
+    min_peer_support_each: 8
+    min_candidate_support: 4
+    min_frequency_difference: 0.15
+    min_lift: 1.5
+  weak:
+    min_peer_support_each: 3
+    min_candidate_support: 2
+    min_frequency_difference: 0.05
+    min_lift: 1.1
+  conflicting:
+    min_peer_support_each: 5
+    min_frequency_difference: 0.10
+
+instruction_note: "Suggested quantities and cooking-method changes have not been validated. Adjust and verify before cooking."
+no_candidate_note: "No supported replacement passed the evidence thresholds and hard restrictions; a reliable adaptation cannot be supported from this dataset."
+external_search_enabled: false

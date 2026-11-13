@@ -1,0 +1,13 @@
+# General culinary expectations, deliberately separate from mined dataset evidence.
+# These statements are predictions, not recipe-specific verification.
+removed_ingredient_effects:
+  eggs: "Eggs can contribute binding, moisture, and structure; removing them may change the crumb and how well the loaf holds together."
+  cream: "Cream contributes liquid and richness; replacing it may change body, fat content, and texture."
+  default: "Removing this ingredient may change the recipe's texture or flavor."
+candidate_effects:
+  banana: "Banana may add moisture, sweetness, and a noticeable banana flavor."
+  applesauce: "Applesauce may add moisture and mild sweetness."
+  flaxseed: "Ground flaxseed mixed with liquid may add binding and a slightly denser texture."
+  oil: "Oil may add fat and moisture but will not reproduce dairy flavor."
+  default: "The replacement may change flavor, texture, or cooking behavior."
+disclaimer: "This dataset-based suggestion is not medical advice and does not guarantee allergen safety. Check every ingredient label and consult a qualified professional for allergy concerns."

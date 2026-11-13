@@ -8,8 +8,9 @@ from typing import Any
 from recipelens.orchestrator.schemas import QueryPlan
 from recipelens.orchestrator.state import SessionState
 from recipelens.services.analytics import AnalysisReport, AnalyticsService
-from recipelens.services.matcher import Matcher, MatchReport
+from recipelens.services.matcher import Constraints, Matcher, MatchReport
 from recipelens.services.search import HybridSearch
+from recipelens.services.substitution import SubstitutionPlan, SubstitutionService
 from recipelens.store.models import Filter
 from recipelens.store.repository import RecipeRepository
 
@@ -20,7 +21,7 @@ class ToolResult:
 
     kind: str  # search | analytics | match | recipe_detail | clarification | unsupported | chitchat | reset | error
     data: Any = None
-    report: AnalysisReport | MatchReport | None = None
+    report: AnalysisReport | MatchReport | SubstitutionPlan | None = None
     warnings: tuple[str, ...] = ()
     clarification_question: str | None = None
     unsupported_reason: str | None = None
@@ -35,11 +36,53 @@ class Router:
         search_service: HybridSearch,
         analytics_service: AnalyticsService,
         matcher_service: Matcher,
+        substitution_service: SubstitutionService | None = None,
     ) -> None:
         self.repository = repository
         self.search_service = search_service
         self.analytics_service = analytics_service
         self.matcher_service = matcher_service
+        self.substitution_service = substitution_service or SubstitutionService(
+            repository,
+            matcher_service.taxonomy,
+            search_service if isinstance(search_service, HybridSearch) else None,
+        )
+
+    def _resolve_substitution_target(
+        self, reference: str | None, state: SessionState
+    ) -> tuple[str | None, str | None]:
+        """Resolve an ID, previous-result ordinal, or unique title phrase."""
+        if not reference:
+            if state.focused_recipe_id:
+                return state.focused_recipe_id, None
+            return None, "Which recipe should I adapt? Include its exact title or recipe ID."
+        ref = reference.strip()
+        if ref.isdigit():
+            rank = int(ref) - 1
+            if 0 <= rank < len(state.last_result_ids):
+                return state.last_result_ids[rank], None
+            return (
+                None,
+                "There is no recipe at that position in the previous results. Give a recipe title or ID.",
+            )
+        if ":" in ref:
+            recipe = self.repository.get_recipe(ref)
+            return (ref, None) if recipe else (None, f"I could not find recipe ID {ref!r}.")
+        matches = self.repository.find_recipes_by_title(ref)
+        exact = [row for row in matches if (row.title or "").strip().casefold() == ref.casefold()]
+        if len(exact) == 1:
+            return exact[0].recipe_id, None
+        if len(matches) == 1:
+            return matches[0].recipe_id, None
+        if matches:
+            return (
+                None,
+                "That title matches multiple recipes. Please include the exact title or stable recipe ID.",
+            )
+        return (
+            None,
+            f"I could not find a recipe matching {ref!r}. Please provide its exact title or ID.",
+        )
 
     def _build_filter(self, state: SessionState, include: tuple[str, ...] = ()) -> Filter:
         """Construct a store Filter preserving all active constraints from state."""
@@ -78,6 +121,35 @@ class Router:
         # 4. Chitchat
         if plan.intent == "chitchat":
             return ToolResult(kind="chitchat", data=None)
+
+        if plan.intent == "substitute":
+            if not plan.remove_term:
+                return ToolResult(
+                    kind="clarification",
+                    clarification_question="Which ingredient or configured group should be removed?",
+                )
+            recipe_id, question = self._resolve_substitution_target(plan.recipe_ref, state)
+            if question or recipe_id is None:
+                return ToolResult(kind="clarification", clarification_question=question)
+            excluded_groups = tuple(
+                dict.fromkeys((*state.matcher_constraints.excluded_groups, *plan.excluded_groups))
+            )
+            excluded_terms = tuple(
+                dict.fromkeys(
+                    (*state.matcher_constraints.exclude_ingredients, *plan.exclude_ingredients)
+                )
+            )
+            hard_filter = Constraints(
+                exclude_ingredients=excluded_terms,
+                excluded_groups=excluded_groups,
+                max_steps=state.matcher_constraints.max_steps,
+                step_metric=state.matcher_constraints.step_metric,
+                exclude_low_confidence=state.matcher_constraints.exclude_low_confidence,
+            )
+            plan_result = self.substitution_service.substitute(
+                recipe_id, plan.remove_term, hard_filter
+            )
+            return ToolResult(kind="substitution", data=plan_result, report=plan_result)
 
         # 5. Recipe Detail
         if plan.intent == "recipe_detail":

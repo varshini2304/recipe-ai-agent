@@ -23,3 +23,22 @@ To run data ingestion and build the SQLite database and search index:
 python scripts/ingest.py
 python scripts/build_index.py
 ```
+
+## Substitution evidence (Task 3)
+
+Substitution suggestions compare ingredient frequencies in same-dish peers. Evidence grades are
+computed from the configured peer support, frequency difference, and lift thresholds in
+`config/substitution.yaml`. The output always reports peer counts and supporting recipe IDs. A
+candidate is an observed association, not a validated recipe adaptation; amounts and method
+changes are not inferred, and the response makes no medical-safety claim. Optional external search
+is disabled.
+
+The current local index has 122,971 rows and uses hybrid FTS5 plus vector retrieval for substitution
+peers. Its recorded build took 3,622 seconds (about 60 minutes). Index files and raw data are
+ignored by Git. On a fresh clone, they must be downloaded/ingested and built locally. Until the
+vector index covers the complete searchable corpus, substitution peer lookup uses FTS5 across the
+SQLite corpus only, and the response labels that retrieval mode explicitly.
+
+Regenerate the Task 3 conversations with `python scripts/generate_substitution_demos.py`; this
+replays the scripts under `scripts/demo_scripts/` and appends the resulting live output to
+`docs/DEMO_CONVERSATIONS.md`.

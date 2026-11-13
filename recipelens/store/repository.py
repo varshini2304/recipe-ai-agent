@@ -128,6 +128,20 @@ class RecipeRepository:
             )
             return self._record(row, canonical)
 
+    def find_recipes_by_title(self, phrase: str, limit: int = 10) -> tuple[RecipeRecord, ...]:
+        """Find title matches for conversational target resolution; callers handle ambiguity."""
+        query = phrase.strip().casefold()
+        if not query or limit <= 0:
+            return ()
+        escaped = query.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+        with self._connect() as connection:
+            rows = connection.execute(
+                "SELECT * FROM recipes WHERE has_title=1 AND title_clean LIKE ? ESCAPE '\\' "
+                "ORDER BY CASE WHEN title_clean=? THEN 0 ELSE 1 END, recipe_id LIMIT ?",
+                (f"%{escaped}%", query, limit),
+            ).fetchall()
+        return tuple(self._record(row) for row in rows)
+
     def recipes_for_ids(self, recipe_ids: Iterable[str]) -> dict[str, RecipeRecord]:
         ids = list(dict.fromkeys(recipe_ids))
         found: dict[str, RecipeRecord] = {}
@@ -259,9 +273,7 @@ class RecipeRepository:
         groups = [list(dict.fromkeys(group)) for group in include_variants if group]
         if not groups:
             return [], 0
-        where, where_params = self._where(
-            recipe_filter, excluded_canonical, search_eligible=True
-        )
+        where, where_params = self._where(recipe_filter, excluded_canonical, search_eligible=True)
         if require_instructions:
             where += " AND r.has_instructions=1"
         packed = json.dumps(groups)

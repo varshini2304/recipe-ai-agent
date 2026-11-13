@@ -11,6 +11,7 @@ from recipelens.orchestrator.router import ToolResult
 from recipelens.orchestrator.state import SessionState
 from recipelens.services.analytics import AnalysisReport
 from recipelens.services.matcher import MatchReport
+from recipelens.services.substitution import SubstitutionPlan
 from recipelens.store.models import RecipeRecord, SearchResult
 
 
@@ -22,6 +23,9 @@ class TemplateComposer:
         path = config_path or root / "config" / "intent.yaml"
         config = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
         self.search_evidence_limit = int(config.get("search_evidence_limit", 4))
+        substitution_path = root / "config" / "substitution.yaml"
+        substitution = yaml.safe_load(substitution_path.read_text(encoding="utf-8")) or {}
+        self.substitution_evidence_id_limit = int(substitution.get("evidence_id_limit", 8))
 
     def compose(self, result: ToolResult, state: SessionState) -> str:
         """Compose a user-facing response from ToolResult and current SessionState."""
@@ -60,6 +64,9 @@ class TemplateComposer:
 
         if result.kind == "analytics":
             return self._compose_analytics(result.report, state)
+
+        if result.kind == "substitution":
+            return self._compose_substitution(result.report)
 
         if result.kind == "error":
             warnings = (
@@ -254,4 +261,96 @@ class TemplateComposer:
         else:
             lines.append("No instructions provided.")
 
+        return "\n".join(lines)
+
+    def _compose_substitution(self, plan: SubstitutionPlan | None) -> str:
+        """Render a mined adaptation with evidence, edits, predictions, and uncertainty separated."""
+        if plan is None:
+            return "No substitution plan is available."
+        report = plan.report
+        id_limit = self.substitution_evidence_id_limit
+        peer_ids = list(report.peer_recipe_ids)
+        lines = [
+            f"## Substitution evidence for {report.target_title} [ID: {report.target_recipe_id}]",
+            "",
+            "### Evidence from dataset (IDs)",
+            f"Retrieval: {report.retrieval_mode}.",
+            f"n_peers={report.n_peers}; with-X={report.with_x_count}; without-X={report.without_x_count}.",
+            f"Evidence grade: {report.evidence_grade}"
+            + (" (indirect peers)" if report.indirect else ""),
+            f"Thresholds used: {json.dumps(report.thresholds, sort_keys=True)}",
+            f"Formula: {report.formula}.",
+        ]
+        if peer_ids:
+            shown = peer_ids[:id_limit]
+            lines.append("Peer recipe IDs: " + ", ".join(f"`{value}`" for value in shown))
+            if len(peer_ids) > len(shown):
+                lines.append(
+                    f"Showing {len(shown)} of {len(peer_ids)} peer IDs; all are in the structured report."
+                )
+        else:
+            lines.append("No supporting peer recipe IDs were retrieved.")
+        if report.candidates:
+            lines.append("Candidate evidence:")
+            for candidate in report.candidates:
+                ids = candidate.support_recipe_ids[:id_limit]
+                lines.append(
+                    f"- `{candidate.canonical}` [{candidate.evidence_grade}]: "
+                    f"with-X {candidate.with_count}/{report.with_x_count}, "
+                    f"without-X {candidate.without_count}/{report.without_x_count}; "
+                    f"frequency difference={candidate.frequency_difference:.3f}, "
+                    f"lift={candidate.lift:.3f}, score={candidate.evidence_score:.3f}."
+                )
+                if ids:
+                    lines.append(
+                        "  Supporting recipe IDs: " + ", ".join(f"`{value}`" for value in ids)
+                    )
+        elif report.conflicting_signals:
+            lines.append(
+                "The strongest observed signals were more common in with-X peers; they are not recommended."
+            )
+            for signal in report.conflicting_signals:
+                lines.append(
+                    f"- `{signal.canonical}`: with-X {signal.with_count}/{report.with_x_count}, "
+                    f"without-X {signal.without_count}/{report.without_x_count}; "
+                    f"frequency difference={signal.frequency_difference:.3f}, lift={signal.lift:.3f}."
+                )
+                ids = signal.with_recipe_ids[:id_limit]
+                if ids:
+                    lines.append(
+                        "  With-X supporting recipe IDs: "
+                        + ", ".join(f"`{value}`" for value in ids)
+                    )
+        else:
+            lines.append("No candidate met the configured support and effect thresholds.")
+
+        lines.extend(["", "### Changes"])
+        if plan.changes:
+            for change in plan.changes:
+                if change.replacement:
+                    lines.append(
+                        f"- Original: {change.original_line}\n  Suggested replacement: "
+                        f"{change.replacement} (quantity not inferred; evidence {change.evidence_grade})"
+                    )
+                else:
+                    lines.append(
+                        f"- No replacement proposed for original line: {change.original_line}"
+                    )
+        else:
+            lines.append(
+                f"No matching `{report.remove}` line was found in the original ingredients."
+            )
+        if plan.updated_ingredients and plan.changes:
+            lines.append("Updated ingredient list (original non-removed lines preserved):")
+            lines.extend(f"- {item}" for item in plan.updated_ingredients)
+        lines.append("Revised instructions (deterministic text edits; review before use):")
+        lines.append(plan.revised_instructions or "No instructions are available.")
+
+        lines.extend(["", "### Predicted effects (not verified)"])
+        lines.append("General culinary expectations; these are not claims from the dataset.")
+        lines.extend(f"- {effect}" for effect in plan.predicted_effects)
+
+        lines.extend(["", "### Uncertainty"])
+        lines.extend(f"- {note}" for note in plan.uncertainty)
+        lines.append(f"- {plan.disclaimer}")
         return "\n".join(lines)

@@ -62,6 +62,8 @@ class QueryPlan:
     order: str = "asc"
     step_metric: str = "step_count"
     analytics_mode: str = "all"  # "all" or "any" for count_with
+    remove_term: str | None = None
+    remove_group: str | None = None
     prefer_fewer_missing: bool = False
     prefer_fewer_steps: bool = False
     unsupported_reason: str | None = None
