@@ -12,4 +12,4 @@ run-api:
 run-web:
 	python -m recipelens.web
 eval:
-	python scripts/inspect_data.py
+	python eval/run_eval.py

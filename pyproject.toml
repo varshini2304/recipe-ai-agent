@@ -12,6 +12,7 @@ dependencies = ["ijson>=3.2", "PyYAML>=6", "tqdm>=4.66", "numpy>=1.25", "sentenc
 [project.optional-dependencies]
 dev = ["pytest>=8", "ruff>=0.6"]
 faiss = ["faiss-cpu>=1.8"]
+eval = ["google-genai>=1.0"]
 
 [tool.setuptools.packages.find]
 include = ["recipelens*"]

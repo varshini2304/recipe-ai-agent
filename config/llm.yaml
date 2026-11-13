@@ -1,0 +1,6 @@
+# Used only by the optional no-tools Gemini baseline; chat evaluation uses the local pipeline.
+provider: gemini
+model: gemini-2.5-flash-lite
+temperature: 0
+max_output_tokens: 512
+cache_path: eval/.cache/oneshot.json

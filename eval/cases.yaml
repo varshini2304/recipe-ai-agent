@@ -1,0 +1,50 @@
+# Each case runs through a fresh ChatSession against the local Recipe Box database.
+cases:
+  - id: penne_then_no_dairy
+    turns: ["penne pasta", "no dairy"]
+    check: search_excludes_dairy
+  - id: garlic_and_onion_count
+    turns: ["How many recipes contain garlic AND onion?"]
+    check: raw_count_garlic_onion
+  - id: tomato_five_fewest_steps
+    turns: ["tomato recipes with fewest steps, top 5"]
+    check: raw_rank_tomato
+  - id: common_ingredients
+    turns: ["What are the 20 most common ingredients?"]
+    check: common_raw_ingredients
+  - id: nutrition_refusal
+    turns: ["How many calories are in a serving?"]
+    check: unsupported_refusal
+  - id: ambiguous_followup
+    turns: ["the second one"]
+    check: clarification
+  - id: pantry_hard_constraints
+    turns: ["I have eggs, onions, tomatoes, rice; no peanuts and at most 6 steps"]
+    check: match_no_peanuts_six_steps
+  - id: exclude_eggs_too
+    turns: ["I have eggs, onions, tomatoes, rice; no peanuts and at most 6 steps", "exclude eggs too"]
+    check: match_excludes_eggs
+  - id: no_eligible_match
+    turns: ["I have eggs, at most 0 steps"]
+    check: no_match_separate_alternatives
+  - id: quantity_sufficient
+    turns: ["I have 2 cups flour, 1 cup sugar, 2 eggs, 1 cup milk, 1 teaspoon baking powder, 1 teaspoon vanilla; what can I make?"]
+    check: quantity_status_sufficient
+  - id: quantity_insufficient
+    turns: ["I have 1/100 cup flour, 1/100 cup sugar, 1/100 cup milk"]
+    check: quantity_status_insufficient
+  - id: quantity_not_verified
+    turns: ["I have 100 cups flour, 100 cups sugar, 1 cup eggs"]
+    check: quantity_status_not_verified
+  - id: banana_bread_without_eggs
+    turns: ["replace eggs without eggs in Bates Banana Bread"]
+    check: substitution_has_evidence
+  - id: cream_pasta_without_dairy
+    turns: ["replace cream without dairy in Lemon Cream Pasta with Chicken"]
+    check: substitution_has_evidence
+  - id: tomato_cream_conflict
+    turns: ["replace cream without dairy in Tomato-Cream Sauce for Pasta"]
+    check: substitution_conflicting_no_candidate
+  - id: unsupported_peer_evidence
+    turns: ["remove saffron from Bates Banana Bread"]
+    check: substitution_none

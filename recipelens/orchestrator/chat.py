@@ -47,6 +47,11 @@ class ChatSession:
         self.composer = composer or TemplateComposer()
         self.verifier = verifier or GroundingVerifier()
         self.state = SessionState.reset()
+        # Kept for evaluation and debugging; callers can inspect the structured tool output
+        # without trying to reconstruct it from rendered prose.
+        self.last_plan: QueryPlan | None = None
+        self.last_result: ToolResult | None = None
+        self.last_verification: GroundingVerification | None = None
 
     @classmethod
     def build(cls, db_path: Path | None = None) -> ChatSession:
@@ -73,9 +78,11 @@ class ChatSession:
     def turn(self, message: str) -> str:
         """Execute a single conversational turn."""
         plan: QueryPlan = self.parser.parse(message, self.state)
+        self.last_plan = plan
         merged_state: SessionState = self.state.merge(plan)
 
         result: ToolResult = self.router.route(plan, merged_state)
+        self.last_result = result
 
         # Update last result IDs in state if search or match returned candidates
         if result.kind == "search" and isinstance(result.data, list):
@@ -94,6 +101,7 @@ class ChatSession:
 
         # Grounding check
         verification: GroundingVerification = self.verifier.verify(answer, result)
+        self.last_verification = verification
         if not verification.is_grounded:
             answer += f"\n\n[Warning: Grounding check failed: {verification.details}]"
 
