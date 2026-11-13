@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RecipeLens</title>
+<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+<link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand"><span class="logo" aria-hidden="true">◎</span> RecipeLens <small>grounded recipe assistant</small></div>
+  <div id="stats" class="stats" aria-live="polite"></div>
+  <div class="actions">
+    <button id="traceBtn" class="ghost" title="Show how the last answer was produced">Trace</button>
+    <button id="resetBtn" class="ghost">New session</button>
+  </div>
+</header>
+
+<main class="layout">
+  <section class="chat" aria-label="Conversation">
+    <div id="log" class="log" role="log" aria-live="polite"></div>
+    <div id="suggest" class="suggest"></div>
+    <div id="chips" class="chips" aria-label="Active constraints"></div>
+    <form id="form" class="composer" autocomplete="off">
+      <input id="input" type="text" placeholder="Search recipes, list your pantry, ask a count, or adapt a recipe…" aria-label="Message">
+      <button type="submit" id="send">Send</button>
+    </form>
+  </section>
+
+  <section class="results" aria-label="Results">
+    <div id="panel" class="panel"><div class="empty">
+      <h2>Results appear here</h2>
+      <p>Every number comes from SQL / Python over the Recipe Box data. The chat text is rendered from those results and cross-checked before it is shown.</p>
+    </div></div>
+  </section>
+</main>
+
+<dialog id="modal"><div id="modalBody"></div><form method="dialog"><button class="ghost">Close</button></form></dialog>
+<dialog id="trace"><div id="traceBody"></div><form method="dialog"><button class="ghost">Close</button></form></dialog>
+<script src="/static/app.js"></script>
+</body>
+</html>

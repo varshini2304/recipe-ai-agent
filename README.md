@@ -70,8 +70,19 @@ python eval/run_eval.py         # full-database evaluation; writes EVAL.md
 ```
 
 Equivalent Make targets are `make setup`, `make ingest`, `make test`, `make test-all`, and
-`make eval`. The API and web directories are documentation placeholders; no API or UI is currently
-implemented. See [the real-database demo conversations](docs/DEMO_CONVERSATIONS.md) for examples.
+`make eval`. The default fast suite currently collects 78 tests: 61 pass and 17 full-corpus tests
+are deselected; `make test-all` includes those slow tests. See
+[the real-database demo conversations](docs/DEMO_CONVERSATIONS.md) for examples.
+
+## Web UI
+
+With the local database and vector index built, run `python -m recipelens.api` and open
+[http://127.0.0.1:8000](http://127.0.0.1:8000). The chat panel supports multi-turn recipe search,
+pantry matching, analytics, and substitutions; the results panel shows recipe cards or structured
+reports, while the constraint chips can be removed to rerun a query. The API exposes `GET /api/health`,
+`GET /api/stats`, `POST /api/chat`, `GET /api/state`, `POST /api/reset`, `POST /api/chip/remove`,
+and `GET /api/recipe?id=...`. Counts, filters, ranks, and scores come from the Python services and
+SQLite/vector retrieval; the UI only displays their outputs.
 
 ## Architecture
 
@@ -83,8 +94,8 @@ flowchart TD
     V --> O[recipelens/orchestrator<br/>intent, state, router, composer, verifier]
     O --> CLI[scripts/chat.py<br/>CLI]
     O -. optional LLM layer not used by current chat .-> LLM[llm placeholder]
-    O -. future only .-> API[api placeholder]
-    O -. future only .-> WEB[web placeholder]
+    O --> API[recipelens/api<br/>FastAPI]
+    API --> WEB[web<br/>HTML CSS JavaScript]
 ```
 
 Each application layer depends only on lower layers. Service calculations are deterministic;

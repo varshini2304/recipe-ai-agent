@@ -17,6 +17,7 @@ not tracked; see `DATA_REPORT.md` for corpus inspection and counts.
 | Services | `recipelens/services/search.py`, `analytics.py`, `taxonomy.py`, `ingredient_families.py`, `matcher.py`, `substitution.py` | Deterministic retrieval/analytics, hard-filter enforcement, quantity checks, and peer-based substitution evidence. |
 | Conversation | `recipelens/orchestrator/schemas.py`, `intent.py`, `state.py`, `router.py`, `composer.py`, `verifier.py`, `chat.py` | Typed intent plans, constraint-preserving state, service routing, deterministic answer text, grounding checks, and the `ChatSession` facade. |
 | CLI and demonstrations | `scripts/chat.py`, `scripts/demo_scripts/`, `docs/DEMO_CONVERSATIONS.md` | Interactive use and replayable, real-database examples. |
+| UI | `recipelens/api/`, `web/index.html`, `web/styles.css`, `web/app.js` | FastAPI session endpoints, serialized service results, removable constraint chips, and the browser interface. |
 | Evaluation | `eval/cases.yaml`, `eval/run_eval.py`, `eval/baseline_oneshot.py`, `EVAL.md` | Real chat cases, raw-line/pandas ground truth, per-case results, and optional no-tools Gemini baseline. |
 | Design history | `DECISIONS.md`, `DATA_REPORT.md`, `INGREDIENT_MATCH_AUDIT.md` | Why the implementation uses its current denominators, normalization, filters, and evidence rules. |
 
