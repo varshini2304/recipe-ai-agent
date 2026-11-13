@@ -1,44 +1,133 @@
 # RecipeLens
 
-Conversational recipe chatbot and deterministic culinary intelligence over the Recipe Box dataset (125,164 recipes).
+RecipeLens is a local conversational recipe search and analysis prototype over Ryan Lee's Recipe
+Box dataset. It preserves the source text, applies deterministic ingredient and safety filters,
+and shows where its recipe evidence comes from. The current chat uses a rule-based intent parser
+and deterministic response templates; it does not call an LLM.
 
-## Dataset
+Project artifacts: [data findings](DATA_REPORT.md), [design decisions](DECISIONS.md),
+[evaluation results](EVAL.md), and [interview walkthrough](docs/WALKTHROUGH.md).
 
-The raw recipe datasets are not tracked in this repository to keep repository size lean and reproducible.
+## Prerequisites and setup
 
-The dataset originates from the [Recipe Box dataset](https://eightportions.com/datasets/Recipes/) by Ryan Lee, distributed under the Open Database License (ODbL) / Database Contents License (DbCL) (see `data_raw/LICENSE` when downloaded).
+- Python 3.11 (64-bit)
+- Git
+- `make` is optional; commands below have direct Python equivalents for Windows PowerShell.
 
-To automatically download and extract the dataset:
-```bash
-python scripts/download_data.py
+```powershell
+git clone https://github.com/varshini2304/recipe-ai-agent.git
+cd recipe-ai-agent
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+python -m pip install -e ".[dev]"
 ```
 
-Alternatively, download `recipes_raw.zip` from [eightportions.com](https://eightportions.com/datasets/Recipes/) and place the three JSON files into `data_raw/`:
-- `recipes_raw_nosource_ar.json` (Allrecipes: 39,802 records)
-- `recipes_raw_nosource_epi.json` (Epicurious: 25,323 records)
-- `recipes_raw_nosource_fn.json` (Food Network: 60,039 records)
+The install includes pytest, Ruff, NumPy, sentence-transformers, and the ingestion dependencies.
+For the optional Gemini one-shot baseline only, install `python -m pip install -e ".[eval]"` and
+put `GEMINI_API_KEY=...` in a local `.env` file. `.env` is ignored by Git.
 
-To run data ingestion and build the SQLite database and search index:
-```bash
+## Get the data and build local files
+
+The [Recipe Box dataset page](https://eightportions.com/datasets/Recipes/) describes the scraped
+dataset and links its download. Its downloaded archive includes an
+[Open Data Commons Attribution (ODC-By) license](https://opendatacommons.org/licenses/by/1-0/).
+That license applies to the database; recipe content from the source websites may have separate
+rights. Keep the archive's `LICENSE` with your local data.
+
+Either run `python scripts/download_data.py` and extract the downloaded ZIP into `data_raw/`, or
+place the three JSON files directly in `data_raw/`:
+
+- `recipes_raw_nosource_ar.json` - 39,802 records
+- `recipes_raw_nosource_epi.json` - 25,323 records
+- `recipes_raw_nosource_fn.json` - 60,039 records
+
+The dataset and generated database/index are not included in this repository. Build the SQLite
+database and search index:
+
+```powershell
+python scripts/inspect_data.py   # optional: inspect source structure first
 python scripts/ingest.py
+python scripts/build_index.py --limit 5000  # quick development index
+# Full index for complete hybrid vector coverage:
 python scripts/build_index.py
 ```
 
-## Substitution evidence (Task 3)
+The recorded 5,000-row build took about 159 seconds. The full 122,971-row vector index took
+3,622 seconds (about 60 minutes) on the original development machine; your runtime depends on
+hardware. `--limit 5000` is useful for development. Task 3 peer search uses FTS5 across the full
+database while the vector index is incomplete; the application reports its retrieval mode.
 
-Substitution suggestions compare ingredient frequencies in same-dish peers. Evidence grades are
-computed from the configured peer support, frequency difference, and lift thresholds in
-`config/substitution.yaml`. The output always reports peer counts and supporting recipe IDs. A
-candidate is an observed association, not a validated recipe adaptation; amounts and method
-changes are not inferred, and the response makes no medical-safety claim. Optional external search
-is disabled.
+## Run the chat, tests, and evaluation
 
-The current local index has 122,971 rows and uses hybrid FTS5 plus vector retrieval for substitution
-peers. Its recorded build took 3,622 seconds (about 60 minutes). Index files and raw data are
-ignored by Git. On a fresh clone, they must be downloaded/ingested and built locally. Until the
-vector index covers the complete searchable corpus, substitution peer lookup uses FTS5 across the
-SQLite corpus only, and the response labels that retrieval mode explicitly.
+```powershell
+python scripts/chat.py
+# Or replay a saved multi-turn transcript:
+python scripts/chat.py --script scripts/demo_scripts/conv1_search_dairy.txt
+python -m pytest -q             # fast tests, no full-corpus tests
+python -m pytest -m "slow or not slow" -q  # complete test suite; requires local data/index
+python eval/run_eval.py         # full-database evaluation; writes EVAL.md
+```
 
-Regenerate the Task 3 conversations with `python scripts/generate_substitution_demos.py`; this
-replays the scripts under `scripts/demo_scripts/` and appends the resulting live output to
-`docs/DEMO_CONVERSATIONS.md`.
+Equivalent Make targets are `make setup`, `make ingest`, `make test`, `make test-all`, and
+`make eval`. The API and web directories are documentation placeholders; no API or UI is currently
+implemented. See [the real-database demo conversations](docs/DEMO_CONVERSATIONS.md) for examples.
+
+## Architecture
+
+```mermaid
+flowchart TD
+    C[config YAML and evaluation prompts] --> D[recipelens/data<br/>loader, steps, ingredients]
+    D --> S[recipelens/store<br/>SQLite, FTS5, vector index]
+    S --> V[recipelens/services<br/>search, analytics, taxonomy, matcher, substitution]
+    V --> O[recipelens/orchestrator<br/>intent, state, router, composer, verifier]
+    O --> CLI[scripts/chat.py<br/>CLI]
+    O -. optional LLM layer not used by current chat .-> LLM[llm placeholder]
+    O -. future only .-> API[api placeholder]
+    O -. future only .-> WEB[web placeholder]
+```
+
+Each application layer depends only on lower layers. Service calculations are deterministic;
+services do not import an LLM. Conversation parsing and response composition are currently
+rule-based.
+
+## Key decisions
+
+- **Retrieval:** SQLite FTS5 BM25 and a normalized MiniLM vector index are combined with reciprocal
+  rank fusion when the vector index is complete. Partial/missing vector coverage is reported;
+  substitution peers fall back to corpus-wide FTS5.
+- **Ingredient normalization and families:** original source title, ingredient list, and
+  instructions remain available unchanged. Regex parsing is separate from reviewed synonyms and
+  family rules in `config/`; garlic powder, tomato sauce, peanut butter, and coconut milk retain
+  their product distinctions. Raw-to-canonical mappings can be audited.
+- **Ranking and scoring:** step ranking uses step count by default, with deterministic tie-breaks.
+  Pantry weights, quantity conversions, peer evidence thresholds, and evidence grades are
+  configured rather than embedded in prompts.
+- **Computation vs. language:** Python/SQLite computes counts, percentages, filters, ranking,
+  evidence grades, and candidate lists. A future LLM may parse typed intent and phrase supplied
+  tool outputs, but it must not calculate dataset statistics. Current chat is a deterministic
+  rule engine.
+- **Uncertainty and refusals:** unsupported nutrition/time questions are refused because those
+  fields are absent. Weak, conflicting, and absent peer evidence are distinguished. No reliable
+  adaptation is claimed when support is insufficient.
+- **External search:** disabled (`external_search_enabled: false`). General culinary effects in
+  adaptation output are labelled as predictions, not dataset evidence; they are not verified.
+
+## Known limitations
+
+- Ingredients without an approved family rule use exact-name matching and can miss variants.
+- Text-based allergen matching is not medical advice and cannot establish medical safety.
+- Recipe co-occurrence is weak evidence of a substitution, not a tested adaptation.
+- The configuration-backed intent parser handles known wording patterns and can miss ambiguous or
+  novel phrasing; ambiguous references should be clarified.
+- Pantry matching scores a configured candidate cap, so a lower-overlap recipe can be omitted.
+- Full vector search requires a locally built index; fresh clones do not contain data or vectors.
+- Ingredient quantities, serving-size scaling, and cooking outcomes are not validated.
+
+## AI tools used
+
+- OpenAI Codex (GPT-6) was used in this workspace to implement and review code, tests, evaluation,
+  and documentation.
+- Claude was used for planning/review as listed in the assignment context.
+- The developer reviewed the repository changes and can explain the code. Runtime evaluation of
+  chat did not call an LLM; Gemini is only an optional, no-tools baseline in `eval/`.
